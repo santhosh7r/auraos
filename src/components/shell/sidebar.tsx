@@ -63,7 +63,7 @@ export function Sidebar() {
         {/* Brand + collapse */}
         <div className={cn("flex h-16 items-center gap-2.5 px-3", collapsed && "justify-center px-0")}>
           <Link href="/dashboard" className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl">
-            <Image src="/logo.png" alt="Aura HQ" width={48} height={48} className="size-12 rounded-xl object-contain" priority />
+            <Image src="/logo.jpg" alt="Aura Digital Services" width={48} height={48} className="size-12 rounded-xl object-contain" priority />
           </Link>
           {!collapsed && (
             <span className="min-w-0 flex-1 truncate text-sm font-semibold tracking-tight">

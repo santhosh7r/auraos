@@ -75,7 +75,7 @@ export default function LoginPage() {
           transition={{ duration: 0.5, ease: "easeOut" }}
           className="relative flex items-center gap-3"
         >
-          <Image src="/logo.png" alt="Aura HQ" width={44} height={44} priority className="size-11 rounded-xl object-contain" />
+          <Image src="/logo.jpg" alt="Aura Digital Services" width={44} height={44} priority className="size-11 rounded-xl object-contain" />
           <span className="text-lg font-semibold tracking-tight">Aura HQ</span>
         </motion.div>
 
@@ -131,7 +131,7 @@ export default function LoginPage() {
         >
           {/* logo on mobile (left panel hidden) */}
           <div className="mb-8 flex flex-col items-center text-center lg:hidden">
-            <Image src="/logo.png" alt="Aura HQ" width={64} height={64} priority className="size-16 rounded-2xl object-contain" />
+            <Image src="/logo.jpg" alt="Aura Digital Services" width={64} height={64} priority className="size-16 rounded-2xl object-contain" />
             <span className="mt-3 text-lg font-semibold tracking-tight">Aura HQ</span>
           </div>
 
