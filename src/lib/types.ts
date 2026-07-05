@@ -74,6 +74,8 @@ export interface Client {
   accountManager: string; // member id
   address: string;
   notes: string;
+  leadId?: string;    // source lead this client was converted from
+  dealValue?: number; // deal value carried over from the won lead (USD base)
   createdAt: string;
 }
 
@@ -172,16 +174,19 @@ export const LEAD_SOURCES: LeadSource[] = [
 ];
 
 export type LeadService =
-  | "Website"
-  | "Web App"
-  | "SaaS"
-  | "E-commerce"
-  | "Branding"
-  | "Automation"
+  | "Social Media Marketing"
+  | "SEO"
+  | "Paid Ads (PPC)"
+  | "Content Marketing"
+  | "Branding & Design"
+  | "Web Design"
+  | "Email Marketing"
+  | "Video Production"
   | "Other";
 
 export const LEAD_SERVICES: LeadService[] = [
-  "Website", "Web App", "SaaS", "E-commerce", "Branding", "Automation", "Other",
+  "Social Media Marketing", "SEO", "Paid Ads (PPC)", "Content Marketing",
+  "Branding & Design", "Web Design", "Email Marketing", "Video Production", "Other",
 ];
 
 export interface Lead {
@@ -200,6 +205,8 @@ export interface Lead {
   followUpDate: string; // next follow-up (YYYY-MM-DD)
   tags: string[];
   notes: string;
+  createdBy?: string; // user id who added the lead
+  clientId?: string;  // set once the lead is converted to a client
   createdAt: string;
 }
 
@@ -309,6 +316,98 @@ export interface AppNotification {
   href?: string;
   read: boolean;
   createdAt: string;
+}
+
+/* ============================================================
+   Leaderboard & Weekly Rewards
+   ============================================================ */
+
+/** Whether an earned reward has actually been given to the team yet. */
+export type RewardFulfillment = "pending" | "completed";
+
+/** The all-or-nothing reward the CEO sets for a single ISO week. */
+export interface WeeklyReward {
+  id: string;
+  week: string; // "2026-W27"
+  title: string;
+  description: string;
+  icon: string; // emoji
+  date: string; // planned / give-by date (YYYY-MM-DD)
+  fulfillment: RewardFulfillment;
+  createdBy: string;
+  createdAt: string;
+}
+
+/** An earned reward awaiting (or completed) fulfillment — the reward "stack". */
+export interface RewardStackItem {
+  week: string;
+  label: string;
+  reward: WeeklyReward;
+  winners: string[]; // member ids who earned it
+}
+
+/** Status of a week's reward. */
+export type RewardStatus =
+  | "none"        // no reward set for the week
+  | "pending"     // reward set, but nobody has tasks assigned yet
+  | "in_progress" // ongoing week, still achievable
+  | "earned"      // everyone assigned completed all their tasks
+  | "missed";     // week ended and at least one person fell short
+
+/** Trend of a member's completed count vs the previous week. */
+export type Trend = "up" | "down" | "flat" | "new";
+
+/** One member's standing for a given week. */
+export interface StandingEntry {
+  memberId: string;
+  name: string;
+  avatar?: string;
+  title: string;
+  rank: number;
+  assigned: number;      // tasks due this week
+  completed: number;     // of those, done
+  completionRate: number; // 0..1
+  perfect: boolean;      // assigned > 0 && completed === assigned
+  weekPoints: number;
+  allTimePoints: number;
+  allTimeAssigned: number;
+  allTimeCompleted: number;
+  allTimeCompletionRate: number; // 0..1 across all weeks
+  perfectWeeks: number;  // # of weeks with a perfect record
+  lastActiveAt: string;
+  trend: Trend;
+  trendDelta: number;    // completed(this) - completed(prev)
+}
+
+/** A summarized past/present week for the history view. */
+export interface WeekSummary {
+  week: string;
+  label: string;
+  reward: WeeklyReward | null;
+  status: RewardStatus;
+  participants: number;      // members with >=1 task that week
+  perfectMembers: number;    // members who completed all their tasks
+  totalAssigned: number;
+  totalCompleted: number;
+  completionRate: number;    // aggregate 0..1
+  deltaCompleted: number;    // vs previous week in the series
+  deltaRate: number;         // completion-rate delta vs previous week
+}
+
+/** Full payload for /api/leaderboard. */
+export interface LeaderboardData {
+  week: string;
+  label: string;
+  reward: WeeklyReward | null;
+  status: RewardStatus;
+  standings: StandingEntry[];   // this week, ranked
+  allTime: StandingEntry[];     // season totals, ranked
+  winners: string[];            // member ids that earn the reward (if earned)
+  assignedCount: number;        // members with >=1 task this week
+  history: WeekSummary[];       // recent weeks, newest first
+  stack: RewardStackItem[];     // all earned rewards (pending + completed), newest first
+  isPast: boolean;
+  isCurrent: boolean;
 }
 
 export interface SessionUser {

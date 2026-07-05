@@ -399,7 +399,7 @@ export default function ProjectsPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <Field label="Project name" className="col-span-2">
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Website redesign" />
+              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Q3 social media campaign" />
             </Field>
             <Field label="Client" className="col-span-2">
               <Select value={form.clientId} onValueChange={(v) => setForm({ ...form, clientId: v })}>

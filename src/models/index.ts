@@ -57,6 +57,8 @@ const ClientSchema = new Schema(
     accountManager: { type: String, default: "" },
     address: { type: String, default: "" },
     notes: { type: String, default: "" },
+    leadId: { type: String, default: "" },   // source lead this client was converted from
+    dealValue: { type: Number, default: 0 }, // deal value carried over from the won lead (USD base)
   },
   base
 );
@@ -110,6 +112,8 @@ const LeadSchema = new Schema(
     followUpDate: { type: String, default: "" },
     tags: { type: [String], default: [] },
     notes: { type: String, default: "" },
+    createdBy: { type: String, default: "", index: true }, // user who added the lead
+    clientId: { type: String, default: "" },               // set when converted to a client
   },
   base
 );
@@ -167,6 +171,20 @@ const ContentPlanSchema = new Schema(
   base
 );
 
+/* ---- WeeklyReward (one all-or-nothing reward per ISO week, set by admin) ---- */
+const WeeklyRewardSchema = new Schema(
+  {
+    week: { type: String, required: true, unique: true, index: true }, // "2026-W27"
+    title: { type: String, required: true },
+    description: { type: String, default: "" },
+    icon: { type: String, default: "🏆" },
+    date: { type: String, default: "" },                  // when the reward is planned / to be given
+    fulfillment: { type: String, default: "pending" },    // "pending" | "completed" (admin-updated)
+    createdBy: { type: String, default: "" },             // admin user id
+  },
+  base
+);
+
 /* ---- Setting (customizable option lists managed from the Config page) ---- */
 const SettingSchema = new Schema(
   {
@@ -190,3 +208,4 @@ export const InvoiceModel = defineModel("Invoice", InvoiceSchema);
 export const ExpenseModel = defineModel("Expense", ExpenseSchema);
 export const NotificationModel = defineModel("Notification", NotificationSchema);
 export const ContentPlanModel = defineModel("ContentPlan", ContentPlanSchema);
+export const WeeklyRewardModel = defineModel("WeeklyReward", WeeklyRewardSchema);

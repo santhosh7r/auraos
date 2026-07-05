@@ -463,7 +463,7 @@ export default function TasksPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <Field label="Title" className="col-span-2">
-              <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Design the landing page" />
+              <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Schedule this week's social posts" />
             </Field>
             <Field label="Description" className="col-span-2">
               <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="What needs to be done?" />

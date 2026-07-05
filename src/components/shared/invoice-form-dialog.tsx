@@ -10,7 +10,7 @@ import {
 import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@/components/ui/select";
-import { cn, toBaseUSD, fromBaseUSD, CURRENCY_META } from "@/lib/utils";
+import { cn, toBaseUSD, fromBaseUSD, formatCurrency, CURRENCY_META } from "@/lib/utils";
 import { useCurrency } from "@/components/providers/currency-provider";
 import type { Invoice, Client, Project, InvoiceStatus } from "@/lib/types";
 import { Loader2 } from "lucide-react";
@@ -93,6 +93,19 @@ export function InvoiceFormDialog({
   // On create the number is derived from the chosen year; on edit it stays fixed.
   const number = editing ? editing.number : nextInvoiceNumber(invoices, Number(form.year));
 
+  // Project billing summary — when a project is chosen, show its amount, how
+  // much has already been invoiced against it, and the running balance so
+  // split billing (e.g. 50/30/20) is easy to track. All maths in USD base.
+  const project = form.projectId ? projects.find((p) => p.id === form.projectId) : undefined;
+  const projectBudget = project?.budget ?? 0;
+  const invoicedBefore = invoices
+    .filter((i) => i.projectId === form.projectId && (!editing || i.id !== editing.id))
+    .reduce((s, i) => s + (i.amount || 0), 0);
+  const thisAmount = Math.round(toBaseUSD(Number(form.amount) || 0));
+  const invoicedAfter = invoicedBefore + thisAmount;
+  const remaining = projectBudget - invoicedAfter;
+  const over = remaining < 0;
+
   async function submit() {
     if (!form.clientId) return;
     setSaving(true);
@@ -157,6 +170,38 @@ export function InvoiceFormDialog({
           <Field label={`Amount (${CURRENCY_META[currency].symbol})`} className="col-span-2">
             <Input type="number" min={0} value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="10000" />
           </Field>
+
+          {/* Project billing summary — only when a project with an amount is picked */}
+          {project && projectBudget > 0 && (
+            <div className="col-span-2 space-y-2 rounded-xl border border-border/70 bg-muted/30 p-3.5">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Project amount</span>
+                <span className="font-semibold tabular-nums">{formatCurrency(projectBudget)}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Already invoiced</span>
+                <span className="tabular-nums">{formatCurrency(invoicedBefore)}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">This invoice</span>
+                <span className="tabular-nums">{thisAmount > 0 ? formatCurrency(thisAmount) : "—"}</span>
+              </div>
+              <div className="my-1 border-t border-border/60" />
+              <div className="flex items-center justify-between text-sm">
+                <span className={cn("font-medium", over ? "text-[hsl(38_92%_62%)]" : "text-foreground")}>
+                  {over ? "Over project amount" : "Balance remaining"}
+                </span>
+                <span className={cn("font-semibold tabular-nums", over ? "text-[hsl(38_92%_62%)]" : "text-foreground")}>
+                  {over ? `+${formatCurrency(Math.abs(remaining))}` : formatCurrency(remaining)}
+                </span>
+              </div>
+            </div>
+          )}
+          {project && projectBudget === 0 && (
+            <p className="col-span-2 -mt-1 text-xs text-muted-foreground">
+              This project has no amount set, so no balance can be tracked.
+            </p>
+          )}
           <Field label="Status" className="col-span-2">
             <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as InvoiceStatus })}>
               <SelectTrigger><SelectValue /></SelectTrigger>

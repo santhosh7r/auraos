@@ -38,7 +38,7 @@ import { useCurrency } from "@/components/providers/currency-provider";
 import { useConfig } from "@/lib/use-config";
 import {
   Plus, Search, Target, Trophy, Users, Percent, MoreHorizontal,
-  Pencil, Trash2, Loader2,
+  Pencil, Trash2, Loader2, Lock,
 } from "lucide-react";
 
 type FormState = {
@@ -49,13 +49,20 @@ type FormState = {
 
 const EMPTY: FormState = {
   name: "", company: "", email: "", phone: "", website: "",
-  source: "Website", service: "Website", status: "new", priority: "medium",
+  source: "Website", service: "Social Media Marketing", status: "new", priority: "medium",
   value: 0, assignedTo: "", followUpDate: "", tags: "", notes: "",
 };
 
 export default function LeadsPage() {
-  const { caps } = useSession();
+  const { caps, user, role } = useSession();
   const { byId } = useTeam();
+  const isAdmin = role === "admin";
+  // Money is admin-only. A non-admin can see the amount only on leads they
+  // added themselves; everyone still sees every lead, just not others' values.
+  const canSeeAmount = React.useCallback(
+    (l: Lead) => isAdmin || (!!l.createdBy && l.createdBy === user.id),
+    [isAdmin, user.id]
+  );
   const { currency } = useCurrency();
   const config = useConfig();
   const serviceOptions: string[] = config.leadServices ?? LEAD_SERVICES;
@@ -77,11 +84,13 @@ export default function LeadsPage() {
   const [wonLead, setWonLead] = React.useState<Lead | null>(null);
   const [converting, setConverting] = React.useState(false);
 
-  // Stats
-  const openPipeline = data
+  // Stats — money aggregates only count leads whose amount this user may see
+  // (all leads for admin; own leads for everyone else).
+  const moneyLeads = data.filter(canSeeAmount);
+  const openPipeline = moneyLeads
     .filter((l) => l.status !== "won" && l.status !== "lost")
     .reduce((s, l) => s + (l.value || 0), 0);
-  const wonValue = data.filter((l) => l.status === "won").reduce((s, l) => s + (l.value || 0), 0);
+  const wonValue = moneyLeads.filter((l) => l.status === "won").reduce((s, l) => s + (l.value || 0), 0);
   const wonCount = data.filter((l) => l.status === "won").length;
   const lostCount = data.filter((l) => l.status === "lost").length;
   const conversion = wonCount + lostCount > 0 ? Math.round((wonCount / (wonCount + lostCount)) * 100) : null;
@@ -142,22 +151,33 @@ export default function LeadsPage() {
     if (!wonLead) return;
     setConverting(true);
     const l = wonLead;
-    // Add the won lead to the client roster.
-    await fetch("/api/r/clients", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: l.company || l.name,
-        email: l.email,
-        phone: l.phone,
-        website: l.website ?? "",
-        status: "active",
-        health: "green",
-        accountManager: l.assignedTo,
-        notes: l.notes,
-      }),
-    }).catch(() => {});
-    await update(l.id, { status: "won" });
+    // Add the won lead to the client roster, carrying over the deal value and a
+    // back-link, and record the conversion on the lead. Skip if already converted.
+    let clientId = l.clientId ?? "";
+    if (!clientId) {
+      try {
+        const res = await fetch("/api/r/clients", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: l.company || l.name,
+            industry: l.service ?? "",
+            email: l.email,
+            phone: l.phone,
+            website: l.website ?? "",
+            status: "active",
+            health: "green",
+            accountManager: l.assignedTo,
+            notes: l.notes,
+            leadId: l.id,
+            dealValue: l.value || 0,
+          }),
+        });
+        const json = await res.json().catch(() => ({}));
+        clientId = json?.data?.id ?? "";
+      } catch { /* client creation is best-effort */ }
+    }
+    await update(l.id, { status: "won", clientId });
     setConverting(false);
     setWonLead(null);
   }
@@ -174,8 +194,8 @@ export default function LeadsPage() {
 
       {/* Stat strip */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard icon={Target} label="Open pipeline" value={formatCurrency(openPipeline, { compact: true })} />
-        <StatCard icon={Trophy} label="Won value" value={formatCurrency(wonValue, { compact: true })} />
+        <StatCard icon={Target} label="Open pipeline" value={formatCurrency(openPipeline, { compact: true })} hint={isAdmin ? undefined : "Your leads only"} />
+        <StatCard icon={Trophy} label="Won value" value={formatCurrency(wonValue, { compact: true })} hint={isAdmin ? undefined : "Your leads only"} />
         <StatCard icon={Users} label="Total leads" value={String(data.length)} />
         <StatCard icon={Percent} label="Conversion" value={conversion === null ? "—" : `${conversion}%`} />
       </div>
@@ -223,7 +243,7 @@ export default function LeadsPage() {
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
               {LEAD_STAGES.map((stage) => {
                 const stageLeads = filtered.filter((l) => l.status === stage.id);
-                const stageValue = stageLeads.reduce((s, l) => s + (l.value || 0), 0);
+                const stageValue = stageLeads.filter(canSeeAmount).reduce((s, l) => s + (l.value || 0), 0);
                 return (
                   <div
                     key={stage.id}
@@ -285,9 +305,18 @@ export default function LeadsPage() {
                                   </DropdownMenu>
                                 )}
                               </div>
-                              <p className="mt-2 text-sm font-bold tabular-nums">{formatCurrency(l.value || 0, { compact: true })}</p>
+                              {canSeeAmount(l) ? (
+                                <p className="mt-2 text-sm font-bold tabular-nums">{formatCurrency(l.value || 0, { compact: true })}</p>
+                              ) : (
+                                <p className="mt-2 inline-flex items-center gap-1 text-sm font-bold text-muted-foreground/35" title="Amount visible to admins and the person who added this lead">
+                                  <Lock className="size-3" /> •••
+                                </p>
+                              )}
                               <div className="mt-2.5 flex items-center justify-between">
-                                <Badge variant="outline" className="text-[10px]">{l.source}</Badge>
+                                <div className="flex items-center gap-1.5">
+                                  <Badge variant="outline" className="text-[10px]">{l.source}</Badge>
+                                  {l.clientId && <Badge variant="muted" className="text-[10px]">Client</Badge>}
+                                </div>
                                 {assignee && <UserAvatar name={assignee.name} src={assignee.avatar} className="size-6" />}
                               </div>
                             </div>
@@ -338,7 +367,11 @@ export default function LeadsPage() {
                         </TableCell>
                         <TableCell><LeadStatusBadge status={l.status} /></TableCell>
                         <TableCell><Badge variant="outline">{l.source}</Badge></TableCell>
-                        <TableCell className="text-right font-medium tabular-nums">{formatCurrency(l.value || 0, { compact: true })}</TableCell>
+                        <TableCell className="text-right font-medium tabular-nums">
+                          {canSeeAmount(l)
+                            ? formatCurrency(l.value || 0, { compact: true })
+                            : <span className="inline-flex items-center gap-1 text-muted-foreground/35"><Lock className="size-3" /> •••</span>}
+                        </TableCell>
                         <TableCell>
                           {assignee ? (
                             <span className="inline-flex items-center gap-2">

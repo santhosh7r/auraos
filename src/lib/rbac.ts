@@ -2,11 +2,12 @@ import type { Role } from "./types";
 import {
   LayoutDashboard, Contact2, Building2, FolderKanban, ListTodo,
   Calendar, CalendarRange, Users, Wallet, Receipt, BarChart3, Settings, SlidersHorizontal,
+  Trophy,
   type LucideIcon,
 } from "lucide-react";
 
 export type NavKey =
-  | "dashboard" | "leads" | "clients" | "projects" | "tasks" | "calendar" | "content"
+  | "dashboard" | "leaderboard" | "leads" | "clients" | "projects" | "tasks" | "calendar" | "content"
   | "finance" | "invoices" | "reports" | "team" | "config" | "settings";
 
 export type NavGroup = "Overview" | "Clients" | "Delivery" | "Finance" | "Company";
@@ -21,6 +22,7 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { key: "dashboard", label: "Overview", href: "/dashboard", icon: LayoutDashboard, group: "Overview" },
+  { key: "leaderboard", label: "Leaderboard", href: "/leaderboard", icon: Trophy, group: "Overview" },
 
   { key: "leads", label: "Leads", href: "/leads", icon: Contact2, group: "Clients" },
   { key: "clients", label: "Clients", href: "/clients", icon: Building2, group: "Clients" },
@@ -51,16 +53,16 @@ export const NAV_KEYS: NavKey[] = ALL;
  */
 export const ROLE_PAGE_DEFAULTS: Record<Role, NavKey[]> = {
   admin: ALL,
-  manager: ["dashboard", "leads", "clients", "projects", "tasks", "calendar", "content", "reports", "team", "settings"],
-  sales: ["dashboard", "leads", "clients", "tasks", "calendar", "reports", "settings"],
-  finance: ["dashboard", "clients", "projects", "finance", "invoices", "reports", "settings"],
-  developer: ["dashboard", "projects", "tasks", "calendar", "settings"],
-  designer: ["dashboard", "projects", "tasks", "calendar", "content", "settings"],
-  marketing: ["dashboard", "leads", "tasks", "calendar", "content", "reports", "settings"],
+  manager: ["dashboard", "leaderboard", "leads", "clients", "projects", "tasks", "calendar", "content", "reports", "team", "settings"],
+  sales: ["dashboard", "leaderboard", "leads", "clients", "tasks", "calendar", "reports", "settings"],
+  finance: ["dashboard", "leaderboard", "clients", "projects", "finance", "invoices", "reports", "settings"],
+  developer: ["dashboard", "leaderboard", "projects", "tasks", "calendar", "settings"],
+  designer: ["dashboard", "leaderboard", "projects", "tasks", "calendar", "content", "settings"],
+  marketing: ["dashboard", "leaderboard", "leads", "tasks", "calendar", "content", "reports", "settings"],
 };
 
 /** Fallback page set for unknown / custom roles. */
-export const CUSTOM_ROLE_DEFAULT_PAGES: NavKey[] = ["dashboard", "content", "settings"];
+export const CUSTOM_ROLE_DEFAULT_PAGES: NavKey[] = ["dashboard", "leaderboard", "content", "settings"];
 
 /** Resolve the page keys for a role, given optional stored overrides (`pages:<role>` values). */
 export function pagesForRole(role: string, override?: string[]): NavKey[] {

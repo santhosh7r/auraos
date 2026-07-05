@@ -84,6 +84,12 @@ export async function POST(
   delete body.id;
   delete body._id;
 
+  // Stamp the creator on models that track ownership (e.g. leads), so amount
+  // visibility can be gated to "admin, or the person who added it".
+  if (entry.model.schema.path("createdBy") && !body.createdBy) {
+    body.createdBy = session.id;
+  }
+
   await connectToDatabase();
   const created = await entry.model.create(body);
   const obj = created.toObject() as Record<string, unknown>;
